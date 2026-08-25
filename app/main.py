@@ -4,6 +4,7 @@ Handles startup/shutdown lifespan, CORS, exception handlers, and router registra
 """
 
 from contextlib import asynccontextmanager
+from sys import prefix
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -13,7 +14,7 @@ from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.exceptions import DatabaseError, NotFoundError
 from app.database.connection import GraphDatabaseConnection
-from app.routers import health, roles, skills, paths, tracks
+from app.routers import health, roles, skills, paths, tracks, persons
 
 logger = structlog.get_logger()
 
@@ -120,6 +121,7 @@ app.include_router(roles.router, prefix="/api/v1")
 app.include_router(skills.router, prefix="/api/v1")
 app.include_router(paths.router, prefix="/api/v1")
 app.include_router(tracks.router, prefix="/api/v1")
+app.include_router(persons.router, prefix="/api/v1")
 
 
 @app.get("/")

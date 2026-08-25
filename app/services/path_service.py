@@ -20,4 +20,8 @@ class PathService:
         return path
 
     def analyze_skill_gaps(self, person_id: str, target_role_id: str) -> dict:
+        if not self.repo.get_person_by_id(person_id):
+            raise NotFoundError(f"Person '{person_id}' not found")
+        if not self.repo.get_role_by_id(target_role_id):
+            raise NotFoundError(f"Role '{target_role_id}' not found")
         return self.repo.get_person_skill_gaps(person_id, target_role_id)

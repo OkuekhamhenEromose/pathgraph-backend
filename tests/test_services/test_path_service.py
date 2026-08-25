@@ -37,3 +37,48 @@ def test_find_career_path_found():
 
     assert result["num_steps"] == 1
     assert len(result["roles"]) == 2
+
+def test_analyze_skill_gaps_unknown_person_raises_not_found():
+    """A bogus person_id must 404, not silently return a full gap list."""
+    mock_repo = MagicMock()
+    mock_repo.get_person_by_id.return_value = None
+
+    service = PathService(mock_repo)
+
+    with pytest.raises(NotFoundError):
+        service.analyze_skill_gaps("p-999", "r-sr-be")
+
+    mock_repo.get_person_skill_gaps.assert_not_called()
+
+
+def test_analyze_skill_gaps_unknown_role_raises_not_found():
+    """A bogus target_role_id must 404 too."""
+    mock_repo = MagicMock()
+    mock_repo.get_person_by_id.return_value = {"id": "p-001", "name": "Alex Chen"}
+    mock_repo.get_role_by_id.return_value = None
+
+    service = PathService(mock_repo)
+
+    with pytest.raises(NotFoundError):
+        service.analyze_skill_gaps("p-001", "r-999")
+
+    mock_repo.get_person_skill_gaps.assert_not_called()
+
+
+def test_analyze_skill_gaps_passes_through_when_valid():
+    """Valid person + role: delegates to the repository unchanged."""
+    mock_repo = MagicMock()
+    mock_repo.get_person_by_id.return_value = {"id": "p-001", "name": "Alex Chen"}
+    mock_repo.get_role_by_id.return_value = {"id": "r-sr-be", "title": "Senior Backend Engineer"}
+    mock_repo.get_person_skill_gaps.return_value = {
+        "current_role": {"id": "r-be"},
+        "target_role_id": "r-sr-be",
+        "missing_skills": [],
+        "total_missing": 0,
+    }
+
+    service = PathService(mock_repo)
+    result = service.analyze_skill_gaps("p-001", "r-sr-be")
+
+    assert result["total_missing"] == 0
+    mock_repo.get_person_skill_gaps.assert_called_once_with("p-001", "r-sr-be")

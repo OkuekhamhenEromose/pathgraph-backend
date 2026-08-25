@@ -241,3 +241,53 @@ class GraphRepository:
             key=lambda x: x.get("level", 0)
         )
         return track
+
+    # ─────────────────────────────────────────────
+    # PERSON QUERIES
+    # ─────────────────────────────────────────────
+
+    def get_all_persons(self) -> List[Dict[str, Any]]:
+        """Retrieve all people with their current role, if any."""
+        query = """
+        MATCH (p:Person)
+        OPTIONAL MATCH (p)-[:HOLDS_ROLE {is_current: true}]->(r:JobRole)
+        RETURN p, r
+        ORDER BY p.name
+        """
+        result = self.session.run(query)
+        persons = []
+        for record in result:
+            person = self._node_to_dict(record["p"])
+            person["current_role"] = self._node_to_dict(record["r"])
+            persons.append(person)
+        return persons
+
+    def get_person_by_id(self, person_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve a single person with their current role, if any."""
+        query = """
+        MATCH (p:Person {id: $person_id})
+        OPTIONAL MATCH (p)-[:HOLDS_ROLE {is_current: true}]->(r:JobRole)
+        RETURN p, r
+        """
+        result = self.session.run(query, person_id=person_id)
+        record = result.single()
+        if record is None:
+            return None
+        person = self._node_to_dict(record["p"])
+        person["current_role"] = self._node_to_dict(record["r"])
+        return person
+
+    def get_person_skills(self, person_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all skills held by a person, with proficiency."""
+        query = """
+        MATCH (p:Person {id: $person_id})-[h:HAS_SKILL]->(s:Skill)
+        RETURN s, h.proficiency_level as proficiency_level
+        ORDER BY s.name
+        """
+        result = self.session.run(query, person_id=person_id)
+        skills = []
+        for record in result:
+            skill = self._node_to_dict(record["s"])
+            skill["proficiency_level"] = record["proficiency_level"]
+            skills.append(skill)
+        return skills
